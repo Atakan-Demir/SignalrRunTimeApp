@@ -3,6 +3,12 @@ import { Component } from '@angular/core';
 import * as Highcharts from 'highcharts'
 // SignalR için import
 import * as signalR from '@microsoft/signalr';
+
+interface SeriesData {
+  name: string;
+  data: number[];
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -11,7 +17,11 @@ import * as signalR from '@microsoft/signalr';
 export class AppComponent {
 
   url = "https://localhost:7218/satishub";
-  connection : signalR.HubConnection;
+  connection: signalR.HubConnection;
+  chart!: Highcharts.Chart;
+  updateFromInput = false;
+  chartCallback: (chart: Highcharts.Chart) => void;
+
   constructor() {
     // SignalR bağlantısı
     this.connection = new signalR.HubConnectionBuilder()
@@ -23,12 +33,32 @@ export class AppComponent {
 
     // hubdaki reciveMessage fonksiyonunu çağır
     this.connection.on("reciveMessage", data => {
-      // gelen verileri yazdır
-      alert(data);
+      // Mevcut serileri temizle
+      while (this.chart.series.length > 0) {
+        this.chart.series[0].remove(true);
+      }
+
+      // Gelen verilere göre yeni serileri ekle
+      data.forEach((seriesData: SeriesData) => {
+        this.chart.addSeries({
+          type: 'line',
+          name: seriesData.name,
+          data: seriesData.data
+        }, true, true);
+      });
     });
+
+
+    const self = this;
+    this.chartCallback = chart => {
+      self.chart = chart;
+      
+    }
+
   }
 
   //*****  Highcharts değişkeni ve config ayarları *****//
+
 
   Highcharts: typeof Highcharts = Highcharts;
   chartsOptions: Highcharts.Options = {
@@ -58,6 +88,7 @@ export class AppComponent {
       verticalAlign: 'middle'
     },
     // Veriler
+    /*
     series: [
       {
         type: 'line',
@@ -75,6 +106,8 @@ export class AppComponent {
         data: [5000, 1000, 3000]
       },
     ],
+    */
+    series: [], // Yeni verilerle dinamik olarak doldurulacak boş seri dizisi
     //plotOptions
     plotOptions: {
       series: {
